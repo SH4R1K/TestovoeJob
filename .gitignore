@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+.env
+.env.*
+!.env.example
+
+*.log

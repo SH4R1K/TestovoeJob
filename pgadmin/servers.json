@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "TestovoeJob PostgreSQL",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "MaintenanceDB": "postgres",
+      "Database": "testovoejob",
+      "PassFile": "/var/lib/pgadmin/.pgpass"
+    }
+  }
+}

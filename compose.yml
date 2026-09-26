@@ -1,0 +1,87 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    image: testovoejob-postgres:18
+    container_name: testovoejob-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: testovoejob
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev_password
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d testovoejob"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - testovoejob
+
+  api:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: testovoejob-api
+    restart: unless-stopped
+    working_dir: /src
+    volumes:
+      - ./src:/src
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        dotnet restore /src/TestovoeJob.API/TestovoeJob.API.csproj
+        dotnet build /src/TestovoeJob.API/TestovoeJob.API.csproj -c Release --no-restore
+        ASPNETCORE_URLS=http://+:8090 dotnet run --project /src/TestovoeJob.API/TestovoeJob.API.csproj -c Release --no-build --no-launch-profile
+    environment:
+      ASPNETCORE_URLS: http://+:8090
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=testovoejob;Username=postgres;Password=postgres_dev_password;Timeout=15;CommandTimeout=30"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: testovoejob
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev_password
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - testovoejob
+
+  pgadmin:
+    image: dpage/pgadmin4:9.18
+    container_name: testovoejob-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@testovoejob.local
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_dev_password
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_CONFIG_ALLOW_SPECIAL_EMAIL_DOMAINS: '"local"'
+      PGPASS_FILE: /pgpass-src/pgpass
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/.pgpass:/pgpass-src/pgpass:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      postgres:
+        condition: service_started
+    networks:
+      - testovoejob
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+
+networks:
+  testovoejob:
+    name: testovoejob
+    driver: bridge
